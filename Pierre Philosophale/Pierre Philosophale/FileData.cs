@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 /* http://mitchkeenan.com/cardproxy/ */
 /*  Fields with the key 'title' will be bold and larger.

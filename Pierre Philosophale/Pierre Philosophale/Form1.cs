@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text;
 using System.IO;
 using System.Windows.Forms;
 using Newtonsoft.Json;
@@ -14,7 +13,7 @@ namespace Pierre_Philosophale
             InitializeComponent();
         }
 
-        private void button1_Click(object sender, System.EventArgs e)
+        private void generateBuildingsJSON_Click(object sender, EventArgs e)
         {
             if (openExcelFile.ShowDialog() == DialogResult.OK)
             {
@@ -40,25 +39,35 @@ namespace Pierre_Philosophale
                         string ex = firstSheet.Range["D" + i].Text;
                         string effect = firstSheet.Range["E" + i].Text;
 
-                        fileData.AddCard(new Card(title: name + "(" + cost + " PS)", alignment: points + " pts", effects: effect, count: int.Parse(ex)));
-                        //Console.WriteLine(string.Format("{0} {1} {2} {3} {4}", name, cost, points, ex, effect));
+                        fileData.AddCard(new Card(title: name + " (" + cost + " PS)", alignment: points + " pts", effects: effect, count: int.Parse(ex)));
                     }
 
-                    string json = JsonConvert.SerializeObject(fileData, Formatting.Indented);
+                    string json = JsonConvert.SerializeObject(fileData.cards, Formatting.Indented);
 
-                    if (saveJSON.ShowDialog() == DialogResult.OK)
+                    MessageBox.Show("Choisissez l'emplacement où sauvegarder le .json.");
+
+                    using (var fbd = new FolderBrowserDialog())
                     {
-                        Stream myStream;
-                        if ((myStream = saveJSON.OpenFile()) != null)
+                        DialogResult result = fbd.ShowDialog();
+
+                        if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(fbd.SelectedPath))
                         {
-                            byte[] bytes = ASCIIEncoding.Default.GetBytes(json);
-                            myStream.Write(bytes, 0, bytes.Length);
-                            // Code to write the stream goes here.
-                            myStream.Close();
+                            string fileName = "Buildings.json";
+                            string filePath = Path.Combine(fbd.SelectedPath, fileName);
+
+                            if (File.Exists(filePath))
+                            {
+                                if (MessageBox.Show("La destination comprend déjà un fichier nommé \"" + fileName + "\". Remplacer ?", "Remplacer ou ignorer les fichiers", MessageBoxButtons.YesNo) == DialogResult.No)
+                                {
+                                    return;
+                                }
+                            }
+
+                            File.WriteAllText(filePath, json);
+
+                            MessageBox.Show("Le fichier a été sauvegardé dans " + filePath);
                         }
                     }
-
-                    Console.WriteLine(json);
 
                     Cursor = Cursors.Default;
 
@@ -71,21 +80,70 @@ namespace Pierre_Philosophale
             }
         }
 
-        private int GetLastFilledRow(Excel.Application excelApp, Excel.Worksheet sheet, string startColumn, string endColumn)
+        private void generateSortsJSON_Click(object sender, EventArgs e)
         {
-            int lastFilledRow = sheet.UsedRange.Rows.Count - 1;
-
-            for (int i = lastFilledRow; i >= 1; i--)
+            if (openExcelFile.ShowDialog() == DialogResult.OK)
             {
-                Excel.Range range = sheet.Range[$"{startColumn}{i}", $"{endColumn}{i}"];
-
-                if (excelApp.WorksheetFunction.CountA(range) > 0)
+                try
                 {
-                    return i;
+                    Cursor = Cursors.WaitCursor;
+
+                    FileData fileData = new FileData();
+
+                    Excel.Application excelApp = new Excel.Application();
+                    excelApp.Visible = false;
+                    Excel.Workbook workbook = excelApp.Workbooks.Open(openExcelFile.FileName);
+                    Excel.Worksheet firstSheet = workbook.Sheets[1];
+
+                    int startNum = 4;
+                    int endNum = firstSheet.UsedRange.Rows.Count;
+
+                    for (int i = startNum; i <= endNum; i++)
+                    {
+                        string name = "Sort";//firstSheet.Range["A" + i].Text; // temporary
+                        string cost = firstSheet.Range["B" + i].Text;
+                        string effect = firstSheet.Range["C" + i].Text;
+                        string ex = firstSheet.Range["D" + i].Text;
+
+                        fileData.AddCard(new Card(title: name + " (" + cost + " PS)", effects: effect, count: int.Parse(ex)));
+                    }
+
+                    string json = JsonConvert.SerializeObject(fileData.cards, Formatting.Indented);
+
+                    MessageBox.Show("Choisissez l'emplacement où sauvegarder le .json.");
+
+                    using (var fbd = new FolderBrowserDialog())
+                    {
+                        DialogResult result = fbd.ShowDialog();
+
+                        if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(fbd.SelectedPath))
+                        {
+                            string fileName = "Sorts.json";
+                            string filePath = Path.Combine(fbd.SelectedPath, fileName);
+
+                            if (File.Exists(filePath))
+                            {
+                                if (MessageBox.Show("La destination comprend déjà un fichier nommé \"" + fileName + "\". Remplacer ?", "Remplacer ou ignorer les fichiers", MessageBoxButtons.YesNo) == DialogResult.No)
+                                {
+                                    return;
+                                }
+                            }
+
+                            File.WriteAllText(filePath, json);
+
+                            MessageBox.Show("Le fichier a été sauvegardé dans " + filePath);
+                        }
+                    }
+
+                    Cursor = Cursors.Default;
+
+                    excelApp.Quit();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
                 }
             }
-
-            return -1;
         }
     }
 }
